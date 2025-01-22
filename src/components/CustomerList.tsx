@@ -181,17 +181,39 @@ export function CustomerList() {
 
   const handleBulkDelete = async () => {
     try {
-      await ApiService.bulkDeleteCustomers(selectedCustomers)
-      toast({
-        title: "Success",
-        description: "Selected customers deleted successfully",
-      })
-      setSelectedCustomers([])
-      loadCustomers()
+      const response = await ApiService.bulkDeleteCustomers(selectedCustomers)
+      
+      switch (response.status) {
+        case 'success':
+          toast({
+            title: "Success",
+            description: response.message || "Selected customers deleted successfully",
+          })
+          setSelectedCustomers([])
+          loadCustomers()
+          break;
+          
+        case 'partial_success':
+          toast({
+            title: "Partial Success",
+            description: response.message || "Some customers could not be deleted",
+            variant: "warning",
+          })
+          setSelectedCustomers([])
+          loadCustomers()
+          break;
+          
+        case 'error':
+          throw new Error(response.message || "Failed to delete customers")
+          
+        default:
+          throw new Error("Unexpected response status")
+      }
     } catch (error) {
+      console.error('Bulk delete error:', error)
       toast({
         title: "Error",
-        description: "Failed to delete selected customers",
+        description: error instanceof Error ? error.message : "Failed to delete selected customers",
         variant: "destructive",
       })
     }
@@ -392,12 +414,25 @@ export function CustomerList() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">
-                  <input
-                    type="checkbox"
-                    checked={selectedCustomers.length === customers.length && customers.length > 0}
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300"
-                  />
+                  <div 
+                    className="cursor-pointer hover:bg-muted flex items-center justify-center p-2 -m-2 rounded"
+                    onClick={(e) => {
+                      const newChecked = !(selectedCustomers.length === customers.length && customers.length > 0)
+                      if (newChecked) {
+                        setSelectedCustomers(customers.map(c => c.customer_id))
+                      } else {
+                        setSelectedCustomers([])
+                      }
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.length === customers.length && customers.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                 </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Geography</TableHead>
@@ -441,13 +476,19 @@ export function CustomerList() {
               ) : (
                 customers.map((customer) => (
                   <TableRow key={customer.customer_id}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedCustomers.includes(customer.customer_id)}
-                        onChange={() => handleSelectCustomer(customer.customer_id)}
-                        className="rounded border-gray-300"
-                      />
+                    <TableCell 
+                      className="cursor-pointer hover:bg-muted"
+                      onClick={() => handleSelectCustomer(customer.customer_id)}
+                    >
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedCustomers.includes(customer.customer_id)}
+                          onChange={() => handleSelectCustomer(customer.customer_id)}
+                          className="rounded border-gray-300"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell>{customer.customer_id}</TableCell>
                     <TableCell>{customer.geography}</TableCell>

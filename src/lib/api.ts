@@ -52,6 +52,12 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
+interface BulkOperationResponse {
+  status: 'success' | 'error' | 'partial_success';
+  message: string;
+  data: any;
+}
+
 // Use Django API URL directly
 const BASE_URL = 'http://localhost:8000/api';
 
@@ -207,7 +213,7 @@ export class ApiService {
     return response.json();
   }
 
-  static async bulkDeleteCustomers(ids: number[]) {
+  static async bulkDeleteCustomers(ids: number[]): Promise<BulkOperationResponse> {
     const response = await fetch(url('/customers/bulk/delete'), {
       method: 'POST',
       headers: this.getHeaders(),
@@ -216,7 +222,7 @@ export class ApiService {
     if (!response.ok) {
       throw new Error(`Failed to bulk delete customers: ${response.statusText}`);
     }
-    return response.ok;
+    return response.json();
   }
 
   // Prediction
