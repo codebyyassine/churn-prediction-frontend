@@ -39,6 +39,7 @@ export function CustomerList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [selectedCustomers, setSelectedCustomers] = useState<number[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -160,6 +161,42 @@ export function CustomerList() {
     loadCustomers()
   }
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedCustomers(customers.map(c => c.customer_id))
+    } else {
+      setSelectedCustomers([])
+    }
+  }
+
+  const handleSelectCustomer = (customerId: number) => {
+    setSelectedCustomers(prev => {
+      if (prev.includes(customerId)) {
+        return prev.filter(id => id !== customerId)
+      } else {
+        return [...prev, customerId]
+      }
+    })
+  }
+
+  const handleBulkDelete = async () => {
+    try {
+      await ApiService.bulkDeleteCustomers(selectedCustomers)
+      toast({
+        title: "Success",
+        description: "Selected customers deleted successfully",
+      })
+      setSelectedCustomers([])
+      loadCustomers()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete selected customers",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (error) {
     return (
       <div className="flex flex-col items-center p-8">
@@ -173,28 +210,44 @@ export function CustomerList() {
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Customers</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setSelectedCustomer(null)}>
-              Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedCustomer ? 'Edit customer details below' : 'Enter customer details below'}
-              </DialogDescription>
-            </DialogHeader>
-            <CustomerForm
-              customer={selectedCustomer}
-              onSuccess={handleFormSuccess}
-              onCancel={() => setIsDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          {selectedCustomers.length > 0 && (
+            <div className="flex items-center gap-2 mr-4">
+              <span className="text-sm text-muted-foreground">
+                {selectedCustomers.length} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                Delete Selected
+              </Button>
+            </div>
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setSelectedCustomer(null)}>
+                Add Customer
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedCustomer ? 'Edit Customer' : 'Add New Customer'}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedCustomer ? 'Edit customer details below' : 'Enter customer details below'}
+                </DialogDescription>
+              </DialogHeader>
+              <CustomerForm
+                customer={selectedCustomer}
+                onSuccess={handleFormSuccess}
+                onCancel={() => setIsDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -338,6 +391,14 @@ export function CustomerList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedCustomers.length === customers.length && customers.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300"
+                  />
+                </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Geography</TableHead>
                 <TableHead>Gender</TableHead>
@@ -353,6 +414,7 @@ export function CustomerList() {
               {loading ? (
                 Array.from({ length: filters.page_size }).map((_, index) => (
                   <TableRow key={`skeleton-${index}`}>
+                    <TableCell><Skeleton className="h-4 w-4" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -372,13 +434,21 @@ export function CustomerList() {
                 ))
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4">
+                  <TableCell colSpan={10} className="text-center py-4">
                     No customers found
                   </TableCell>
                 </TableRow>
               ) : (
                 customers.map((customer) => (
                   <TableRow key={customer.customer_id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedCustomers.includes(customer.customer_id)}
+                        onChange={() => handleSelectCustomer(customer.customer_id)}
+                        className="rounded border-gray-300"
+                      />
+                    </TableCell>
                     <TableCell>{customer.customer_id}</TableCell>
                     <TableCell>{customer.geography}</TableCell>
                     <TableCell>{customer.gender}</TableCell>
