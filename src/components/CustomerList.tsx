@@ -41,6 +41,14 @@ export function CustomerList() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
   const [selectedCustomers, setSelectedCustomers] = useState<number[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isBulkUpdateDialogOpen, setIsBulkUpdateDialogOpen] = useState(false)
+  const [bulkUpdateData, setBulkUpdateData] = useState({
+    geography: null as string | null,
+    gender: null as string | null,
+    has_cr_card: undefined as boolean | undefined,
+    is_active_member: undefined as boolean | undefined,
+    exited: undefined as boolean | undefined,
+  })
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -219,6 +227,83 @@ export function CustomerList() {
     }
   }
 
+  const handleBulkUpdate = async () => {
+    try {
+      // Filter out undefined values
+      const updateData = Object.fromEntries(
+        Object.entries(bulkUpdateData)
+          .filter(([_, v]) => v !== undefined && v !== '')
+      )
+
+      if (Object.keys(updateData).length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one field to update",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Create array of updates
+      const updates = selectedCustomers.map(id => ({
+        customer_id: id,
+        ...updateData
+      }))
+
+      const response = await ApiService.bulkUpdateCustomers(updates)
+      
+      switch (response.status) {
+        case 'success':
+          toast({
+            title: "Success",
+            description: response.message || "Selected customers updated successfully",
+          })
+          setSelectedCustomers([])
+          setIsBulkUpdateDialogOpen(false)
+          setBulkUpdateData({
+            geography: null,
+            gender: null,
+            has_cr_card: undefined,
+            is_active_member: undefined,
+            exited: undefined,
+          })
+          loadCustomers()
+          break;
+          
+        case 'partial_success':
+          toast({
+            title: "Partial Success",
+            description: response.message || "Some customers could not be updated",
+            variant: "warning",
+          })
+          setSelectedCustomers([])
+          setIsBulkUpdateDialogOpen(false)
+          setBulkUpdateData({
+            geography: null,
+            gender: null,
+            has_cr_card: undefined,
+            is_active_member: undefined,
+            exited: undefined,
+          })
+          loadCustomers()
+          break;
+          
+        case 'error':
+          throw new Error(response.message || "Failed to update customers")
+          
+        default:
+          throw new Error("Unexpected response status")
+      }
+    } catch (error) {
+      console.error('Bulk update error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update selected customers",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (error) {
     return (
       <div className="flex flex-col items-center p-8">
@@ -238,6 +323,13 @@ export function CustomerList() {
               <span className="text-sm text-muted-foreground">
                 {selectedCustomers.length} selected
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsBulkUpdateDialogOpen(true)}
+              >
+                Update Selected
+              </Button>
               <Button
                 variant="destructive"
                 size="sm"
@@ -271,6 +363,127 @@ export function CustomerList() {
           </Dialog>
         </div>
       </div>
+
+      {/* Bulk Update Dialog */}
+      <Dialog open={isBulkUpdateDialogOpen} onOpenChange={setIsBulkUpdateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Update Customers</DialogTitle>
+            <DialogDescription>
+              Update multiple customers at once. Only selected fields will be updated.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Geography</Label>
+              <Select
+                value={bulkUpdateData.geography || "no_change"}
+                onValueChange={(value) => setBulkUpdateData(prev => ({ 
+                  ...prev, 
+                  geography: value === "no_change" ? null : value 
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select geography" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No Change</SelectItem>
+                  <SelectItem value="France">France</SelectItem>
+                  <SelectItem value="Germany">Germany</SelectItem>
+                  <SelectItem value="Spain">Spain</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Gender</Label>
+              <Select
+                value={bulkUpdateData.gender || "no_change"}
+                onValueChange={(value) => setBulkUpdateData(prev => ({ 
+                  ...prev, 
+                  gender: value === "no_change" ? null : value 
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no_change">No Change</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="has_cr_card"
+                  className="rounded border-gray-300"
+                  checked={bulkUpdateData.has_cr_card ?? false}
+                  onChange={(e) => setBulkUpdateData(prev => ({ 
+                    ...prev, 
+                    has_cr_card: e.target.checked 
+                  }))}
+                />
+                <Label htmlFor="has_cr_card">Has Credit Card</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="is_active_member"
+                  className="rounded border-gray-300"
+                  checked={bulkUpdateData.is_active_member ?? false}
+                  onChange={(e) => setBulkUpdateData(prev => ({ 
+                    ...prev, 
+                    is_active_member: e.target.checked 
+                  }))}
+                />
+                <Label htmlFor="is_active_member">Active Member</Label>
+                <span className="text-sm text-muted-foreground ml-2">(Currently using services)</span>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="exited"
+                  className="rounded border-gray-300"
+                  checked={bulkUpdateData.exited ?? false}
+                  onChange={(e) => setBulkUpdateData(prev => ({ 
+                    ...prev, 
+                    exited: e.target.checked 
+                  }))}
+                />
+                <Label htmlFor="exited">Churned</Label>
+                <span className="text-sm text-muted-foreground ml-2">(Customer has left)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBulkUpdateDialogOpen(false)
+                setBulkUpdateData({
+                  geography: null,
+                  gender: null,
+                  has_cr_card: undefined,
+                  is_active_member: undefined,
+                  exited: undefined,
+                })
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleBulkUpdate}>
+              Update {selectedCustomers.length} Customers
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-4">
         {/* Filters */}
@@ -325,9 +538,24 @@ export function CustomerList() {
                   <SelectValue placeholder="Churn status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="all">All Churn Status</SelectItem>
                   <SelectItem value="true">Churned</SelectItem>
-                  <SelectItem value="false">Active</SelectItem>
+                  <SelectItem value="false">Retained</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Active Member Filter */}
+              <Select
+                value={filters.is_active_member?.toString() || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, is_active_member: value === 'all' ? undefined : value === 'true' })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Member status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Members</SelectItem>
+                  <SelectItem value="true">Active Members</SelectItem>
+                  <SelectItem value="false">Inactive Members</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -441,7 +669,8 @@ export function CustomerList() {
                 <TableHead>Credit Score</TableHead>
                 <TableHead>Balance</TableHead>
                 <TableHead>Products</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Active Member</TableHead>
+                <TableHead>Churn Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -457,7 +686,7 @@ export function CustomerList() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Skeleton className="h-8 w-16" />
@@ -498,8 +727,13 @@ export function CustomerList() {
                     <TableCell>${customer.balance.toLocaleString()}</TableCell>
                     <TableCell>{customer.num_of_products}</TableCell>
                     <TableCell>
+                      <Badge variant={customer.is_active_member ? "success" : "secondary"}>
+                        {customer.is_active_member ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={customer.exited ? "destructive" : "success"}>
-                        {customer.exited ? "Churned" : "Active"}
+                        {customer.exited ? "Churned" : "Retained"}
                       </Badge>
                     </TableCell>
                     <TableCell>

@@ -43,6 +43,7 @@ const formSchema = z.object({
   ),
   has_cr_card: z.boolean(),
   is_active_member: z.boolean(),
+  exited: z.boolean(),
   estimated_salary: z.string().transform(Number).pipe(
     z.number().min(0)
   ),
@@ -69,6 +70,7 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
       num_of_products: customer.num_of_products?.toString() || "1",
       has_cr_card: customer.has_cr_card || false,
       is_active_member: customer.is_active_member || false,
+      exited: customer.exited || false,
       estimated_salary: customer.estimated_salary?.toString() || "75000",
       geography: customer.geography || "France",
       gender: customer.gender || "Female",
@@ -80,6 +82,7 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
       num_of_products: "1",
       has_cr_card: false,
       is_active_member: false,
+      exited: false,
       estimated_salary: "75000",
       geography: "France",
       gender: "Female",
@@ -290,7 +293,31 @@ export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProp
                     onChange={field.onChange}
                   />
                 </FormControl>
-                <FormLabel>Is Active Member</FormLabel>
+                <FormLabel>Active Member</FormLabel>
+                <FormDescription className="ml-2">
+                  (Currently using services)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="exited"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Churned</FormLabel>
+                <FormDescription className="ml-2">
+                  (Customer has left)
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
