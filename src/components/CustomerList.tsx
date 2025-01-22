@@ -32,6 +32,7 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import { CustomerForm } from './CustomerForm'
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function CustomerList() {
   const [customers, setCustomers] = useState<any[]>([])
@@ -159,10 +160,6 @@ export function CustomerList() {
     loadCustomers()
   }
 
-  if (loading) {
-    return <div className="flex justify-center items-center p-8">Loading customers...</div>
-  }
-
   if (error) {
     return (
       <div className="flex flex-col items-center p-8">
@@ -203,125 +200,137 @@ export function CustomerList() {
       <div className="space-y-4">
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Geography Filter */}
-          <Select
-            value={filters.geography || 'all'}
-            onValueChange={(value) => setFilters({ ...filters, geography: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select geography" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Geographies</SelectItem>
-              <SelectItem value="France">France</SelectItem>
-              <SelectItem value="Germany">Germany</SelectItem>
-              <SelectItem value="Spain">Spain</SelectItem>
-            </SelectContent>
-          </Select>
+          {loading ? (
+            <>
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </>
+          ) : (
+            <>
+              {/* Geography Filter */}
+              <Select
+                value={filters.geography || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, geography: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select geography" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Geographies</SelectItem>
+                  <SelectItem value="France">France</SelectItem>
+                  <SelectItem value="Germany">Germany</SelectItem>
+                  <SelectItem value="Spain">Spain</SelectItem>
+                </SelectContent>
+              </Select>
 
-          {/* Gender Filter */}
-          <Select
-            value={filters.gender || 'all'}
-            onValueChange={(value) => setFilters({ ...filters, gender: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Genders</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Male">Male</SelectItem>
-            </SelectContent>
-          </Select>
+              {/* Gender Filter */}
+              <Select
+                value={filters.gender || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, gender: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genders</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                </SelectContent>
+              </Select>
 
-          {/* Churn Status Filter */}
-          <Select
-            value={filters.exited?.toString() || 'all'}
-            onValueChange={(value) => setFilters({ ...filters, exited: value === 'all' ? undefined : value === 'true' })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Churn status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="true">Churned</SelectItem>
-              <SelectItem value="false">Active</SelectItem>
-            </SelectContent>
-          </Select>
+              {/* Churn Status Filter */}
+              <Select
+                value={filters.exited?.toString() || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, exited: value === 'all' ? undefined : value === 'true' })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Churn status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="true">Churned</SelectItem>
+                  <SelectItem value="false">Active</SelectItem>
+                </SelectContent>
+              </Select>
 
-          {/* Ordering */}
-          <Select
-            value={filters.ordering || 'customer_id'}
-            onValueChange={(value) => setFilters({ ...filters, ordering: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="customer_id">ID (Ascending)</SelectItem>
-              <SelectItem value="-customer_id">ID (Descending)</SelectItem>
-              <SelectItem value="age">Age (Ascending)</SelectItem>
-              <SelectItem value="-age">Age (Descending)</SelectItem>
-              <SelectItem value="credit_score">Credit Score (Ascending)</SelectItem>
-              <SelectItem value="-credit_score">Credit Score (Descending)</SelectItem>
-              <SelectItem value="balance">Balance (Ascending)</SelectItem>
-              <SelectItem value="-balance">Balance (Descending)</SelectItem>
-            </SelectContent>
-          </Select>
+              {/* Ordering */}
+              <Select
+                value={filters.ordering || 'customer_id'}
+                onValueChange={(value) => setFilters({ ...filters, ordering: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer_id">ID (Ascending)</SelectItem>
+                  <SelectItem value="-customer_id">ID (Descending)</SelectItem>
+                  <SelectItem value="age">Age (Ascending)</SelectItem>
+                  <SelectItem value="-age">Age (Descending)</SelectItem>
+                  <SelectItem value="credit_score">Credit Score (Ascending)</SelectItem>
+                  <SelectItem value="-credit_score">Credit Score (Descending)</SelectItem>
+                  <SelectItem value="balance">Balance (Ascending)</SelectItem>
+                  <SelectItem value="-balance">Balance (Descending)</SelectItem>
+                </SelectContent>
+              </Select>
 
-          {/* Range Filters */}
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              placeholder="Min Age"
-              value={filters.min_age}
-              onChange={(e) => setFilters({ ...filters, min_age: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Max Age"
-              value={filters.max_age}
-              onChange={(e) => setFilters({ ...filters, max_age: e.target.value })}
-            />
-          </div>
+              {/* Range Filters */}
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min Age"
+                  value={filters.min_age}
+                  onChange={(e) => setFilters({ ...filters, min_age: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max Age"
+                  value={filters.max_age}
+                  onChange={(e) => setFilters({ ...filters, max_age: e.target.value })}
+                />
+              </div>
 
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              placeholder="Min Credit Score"
-              value={filters.min_credit_score}
-              onChange={(e) => setFilters({ ...filters, min_credit_score: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Max Credit Score"
-              value={filters.max_credit_score}
-              onChange={(e) => setFilters({ ...filters, max_credit_score: e.target.value })}
-            />
-          </div>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min Credit Score"
+                  value={filters.min_credit_score}
+                  onChange={(e) => setFilters({ ...filters, min_credit_score: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max Credit Score"
+                  value={filters.max_credit_score}
+                  onChange={(e) => setFilters({ ...filters, max_credit_score: e.target.value })}
+                />
+              </div>
 
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              placeholder="Min Balance"
-              value={filters.min_balance}
-              onChange={(e) => setFilters({ ...filters, min_balance: e.target.value })}
-            />
-            <Input
-              type="number"
-              placeholder="Max Balance"
-              value={filters.max_balance}
-              onChange={(e) => setFilters({ ...filters, max_balance: e.target.value })}
-            />
-          </div>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min Balance"
+                  value={filters.min_balance}
+                  onChange={(e) => setFilters({ ...filters, min_balance: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  placeholder="Max Balance"
+                  value={filters.max_balance}
+                  onChange={(e) => setFilters({ ...filters, max_balance: e.target.value })}
+                />
+              </div>
 
-          {/* Search */}
-          <Input
-            type="text"
-            placeholder="Search..."
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          />
+              {/* Search */}
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              />
+            </>
+          )}
         </div>
 
         {/* Table */}
@@ -341,7 +350,27 @@ export function CustomerList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {customers.length === 0 ? (
+              {loading ? (
+                Array.from({ length: filters.page_size }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-8 w-16" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : customers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-4">
                     No customers found
@@ -396,27 +425,39 @@ export function CustomerList() {
 
         {/* Pagination */}
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Showing {((pagination.currentPage - 1) * filters.page_size) + 1} to {Math.min(pagination.currentPage * filters.page_size, pagination.totalItems)} of {pagination.totalItems} customers
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}
-            >
-              Next
-            </Button>
-          </div>
+          {loading ? (
+            <>
+              <Skeleton className="h-4 w-64" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm text-muted-foreground">
+                Showing {((pagination.currentPage - 1) * filters.page_size) + 1} to {Math.min(pagination.currentPage * filters.page_size, pagination.totalItems)} of {pagination.totalItems} customers
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
