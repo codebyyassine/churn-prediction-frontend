@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface User {
   id: number;
@@ -69,14 +71,14 @@ interface TrainingMetrics {
 }
 
 interface ModelMetrics {
-  latest_metrics: TrainingMetrics | null;
-  best_metrics: TrainingMetrics | null;
+  latest_metrics: TrainingMetrics;
+  best_metrics: TrainingMetrics;
 }
 
-export function AdminPanel() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
+function UserManagementTab() {
   const [users, setUsers] = useState<User[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
@@ -85,94 +87,26 @@ export function AdminPanel() {
     last_name: "",
     is_staff: false,
   })
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [trainingStatus, setTrainingStatus] = useState<'idle' | 'training' | 'completed' | 'error'>('idle')
-  const [modelMetrics, setModelMetrics] = useState<ModelMetrics>({
-    latest_metrics: null,
-    best_metrics: null
-  })
-  const [selectedModel, setSelectedModel] = useState<'latest' | 'best'>('latest')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadUsers()
-    loadModelMetrics()
-  }, [])
 
   const loadUsers = async () => {
     try {
+      setLoading(true)
       const data = await ApiService.getUsers()
-      // Handle paginated response
-      if (data && 'results' in data) {
-        const paginatedData = data as PaginatedResponse<User>
-        setUsers(paginatedData.results)
-      } else {
-        console.error('Received unexpected data format:', data)
-        setUsers([])
-      }
+      setUsers(data.results)
     } catch (error) {
-      console.error('Error loading users:', error)
       toast({
         title: "Error",
-        description: "Failed to load users.",
+        description: "Failed to load users",
         variant: "destructive",
       })
-      setUsers([])
+    } finally {
+      setLoading(false)
     }
   }
 
-  const loadModelMetrics = async () => {
-    try {
-      const data = await ApiService.getModelMetrics()
-      setModelMetrics({
-        latest_metrics: data.latest_metrics,
-        best_metrics: data.best_metrics
-      })
-    } catch (error) {
-      console.error('Error loading model metrics:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load model metrics",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleLogout = () => {
-    ApiService.clearCredentials()
-    router.push("/login")
-  }
-
-  const handleTraining = async () => {
-    setTrainingStatus('training')
-    setErrorMessage(null)
-    
-    try {
-      const result = await ApiService.trainModel()
-      setModelMetrics({
-        latest_metrics: result.latest_metrics,
-        best_metrics: result.best_metrics
-      })
-      setTrainingStatus('completed')
-      
-      toast({
-        title: "Success",
-        description: result.is_new_best 
-          ? "New best model trained and saved!" 
-          : "Model training completed successfully",
-      })
-    } catch (err) {
-      console.error('Training failed:', err)
-      setErrorMessage(err instanceof Error ? err.message : 'An error occurred during training')
-      setTrainingStatus('error')
-      
-      toast({
-        title: "Error",
-        description: "Model training failed",
-        variant: "destructive",
-      })
-    }
-  }
+  useEffect(() => {
+    loadUsers()
+  }, [])
 
   const handleCreateUser = async () => {
     try {
@@ -200,22 +134,257 @@ export function AdminPanel() {
     }
   }
 
-  const getAverageCrossValScore = (scores: number[]) => {
-    if (!scores.length) return 0
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">User Management</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>Add User</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New User</DialogTitle>
+              <DialogDescription>
+                Create a new user account
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  value={newUser.first_name}
+                  onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  value={newUser.last_name}
+                  onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="isAdmin"
+                  checked={newUser.is_staff}
+                  onChange={(e) => setNewUser({ ...newUser, is_staff: e.target.checked })}
+                />
+                <Label htmlFor="isAdmin">Admin User</Label>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleCreateUser}>Create User</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Username</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Admin</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                </TableRow>
+              ))
+            ) : users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-4">
+                  No users found
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{`${user.first_name} ${user.last_name}`}</TableCell>
+                  <TableCell>{user.is_staff ? "Yes" : "No"}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+function ModelManagementTab() {
+  const [metrics, setMetrics] = useState<ModelMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [trainingStatus, setTrainingStatus] = useState<'idle' | 'training' | 'completed' | 'error'>('idle')
+  const [activeMetrics, setActiveMetrics] = useState<'latest' | 'best'>('latest')
+
+  useEffect(() => {
+    const loadMetrics = async () => {
+      try {
+        setLoading(true)
+        const data = await ApiService.getModelMetrics()
+        setMetrics(data)
+      } catch (error) {
+        console.error('Error loading metrics:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load model metrics",
+          variant: "destructive",
+        })
+        setMetrics(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMetrics()
+  }, [])
+
+  const handleTraining = async () => {
+    try {
+      setTrainingStatus('training')
+      const result = await ApiService.trainModel()
+      setMetrics(result)
+      setTrainingStatus('completed')
+      toast({
+        title: "Success",
+        description: "Model training completed successfully",
+      })
+    } catch (error) {
+      console.error('Training failed:', error)
+      setTrainingStatus('error')
+      toast({
+        title: "Error",
+        description: "Model training failed",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getAverageCrossValScore = (scores: number[] | undefined) => {
+    if (!scores?.length) return 0
     return scores.reduce((a, b) => a + b, 0) / scores.length
   }
 
-  const renderModelMetrics = (metrics: TrainingMetrics | null) => {
-    if (!metrics || !metrics.training_details) {
-      console.log('Invalid metrics data:', metrics);
-      return (
-        <div className="text-center py-4 text-muted-foreground">
-          No model metrics available
-        </div>
-      );
-    }
-
+  if (loading) {
     return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-[300px]" />
+        <Skeleton className="h-[300px]" />
+        <Skeleton className="h-[300px]" />
+      </div>
+    )
+  }
+
+  if (!metrics || !metrics.latest_metrics) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        No model metrics available
+      </div>
+    )
+  }
+
+  // Use selected metrics for display
+  const currentMetrics = activeMetrics === 'latest' ? metrics.latest_metrics : metrics.best_metrics
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Model Performance</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border p-1">
+            <Button
+              variant={activeMetrics === 'latest' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveMetrics('latest')}
+              className="relative"
+            >
+              Latest Model
+              {activeMetrics === 'latest' && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 h-4 w-4 p-0">
+                  <Icons.check className="h-3 w-3" />
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeMetrics === 'best' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveMetrics('best')}
+              className="relative"
+            >
+              Best Model
+              {activeMetrics === 'best' && (
+                <Badge variant="secondary" className="absolute -top-2 -right-2 h-4 w-4 p-0">
+                  <Icons.check className="h-3 w-3" />
+                </Badge>
+              )}
+            </Button>
+          </div>
+          <Button 
+            onClick={handleTraining} 
+            disabled={trainingStatus === 'training'}
+            className="min-w-[120px]"
+          >
+            {trainingStatus === 'training' ? (
+              <>
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                Training
+              </>
+            ) : (
+              'Train Model'
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {trainingStatus === 'error' && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Training Failed</CardTitle>
+            <CardDescription>An error occurred during model training</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Performance Metrics */}
         <Card>
@@ -227,29 +396,29 @@ export function AdminPanel() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Training Accuracy</span>
-                <span className="text-sm">{(metrics.train_accuracy * 100).toFixed(1)}%</span>
+                <span className="text-sm">{(currentMetrics.train_accuracy * 100).toFixed(1)}%</span>
               </div>
-              <Progress value={metrics.train_accuracy * 100} />
+              <Progress value={currentMetrics.train_accuracy * 100} />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Test Accuracy</span>
-                <span className="text-sm">{(metrics.test_accuracy * 100).toFixed(1)}%</span>
+                <span className="text-sm">{(currentMetrics.test_accuracy * 100).toFixed(1)}%</span>
               </div>
-              <Progress value={metrics.test_accuracy * 100} />
+              <Progress value={currentMetrics.test_accuracy * 100} />
             </div>
             <div className="grid grid-cols-3 gap-2 pt-2">
               <div className="space-y-1">
                 <span className="text-xs font-medium">Precision</span>
-                <div className="text-lg font-bold">{(metrics.precision_class1 * 100).toFixed(1)}%</div>
+                <div className="text-lg font-bold">{(currentMetrics.precision_class1 * 100).toFixed(1)}%</div>
               </div>
               <div className="space-y-1">
                 <span className="text-xs font-medium">Recall</span>
-                <div className="text-lg font-bold">{(metrics.recall_class1 * 100).toFixed(1)}%</div>
+                <div className="text-lg font-bold">{(currentMetrics.recall_class1 * 100).toFixed(1)}%</div>
               </div>
               <div className="space-y-1">
                 <span className="text-xs font-medium">F1 Score</span>
-                <div className="text-lg font-bold">{(metrics.f1_class1 * 100).toFixed(1)}%</div>
+                <div className="text-lg font-bold">{(currentMetrics.f1_class1 * 100).toFixed(1)}%</div>
               </div>
             </div>
           </CardContent>
@@ -263,7 +432,7 @@ export function AdminPanel() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[200px] pr-4">
-              {metrics.feature_importance && metrics.feature_importance
+              {currentMetrics.feature_importance
                 .sort((a, b) => b.importance - a.importance)
                 .map((feature) => (
                   <div key={feature.feature} className="mb-2">
@@ -286,219 +455,58 @@ export function AdminPanel() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Samples</span>
-                  <Badge variant="secondary">{metrics.training_details.total_samples}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Training Time</span>
-                  <Badge variant="secondary">{metrics.training_details.training_time.toFixed(2)}s</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Cross-Val Score</span>
-                  <Badge variant="secondary">
-                    {(getAverageCrossValScore(metrics.training_details.cross_val_scores) * 100).toFixed(1)}%
-                  </Badge>
+              <div>
+                <div className="text-sm font-medium mb-1">Total Samples</div>
+                <div className="text-2xl font-bold">
+                  {currentMetrics.training_details.total_samples.toLocaleString()}
                 </div>
               </div>
-              <div className="pt-2">
-                <h4 className="text-sm font-medium mb-2">Best Parameters</h4>
-                <ScrollArea className="h-[100px]">
-                  <div className="space-y-1">
-                    {metrics.best_params && Object.entries(metrics.best_params).map(([param, value]) => (
-                      <div key={param} className="text-xs">
-                        <span className="font-medium">{param}:</span> {value}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+              <div>
+                <div className="text-sm font-medium mb-1">Training Time</div>
+                <div className="text-2xl font-bold">
+                  {currentMetrics.training_details.training_time.toFixed(2)}s
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">Cross-Validation Score</div>
+                <div className="text-2xl font-bold">
+                  {(getAverageCrossValScore(currentMetrics.training_details.cross_val_scores) * 100).toFixed(1)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Average of {currentMetrics.training_details.cross_val_scores.length} folds
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  const renderTrainingMetrics = () => {
-    return (
+export function AdminPanel() {
+  return (
+    <div className="container mx-auto py-10">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Model Management</h2>
-            <p className="text-sm text-muted-foreground">Train and monitor the churn prediction model</p>
-          </div>
-          <Button 
-            onClick={handleTraining} 
-            disabled={trainingStatus === 'training'}
-            className="min-w-[120px]"
-          >
-            {trainingStatus === 'training' ? (
-              <>
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                Training
-              </>
-            ) : (
-              'Train Model'
-            )}
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage users and monitor model performance
+          </p>
         </div>
 
-        <Tabs value={selectedModel} onValueChange={(value) => setSelectedModel(value as 'latest' | 'best')}>
-          <TabsList className="grid w-[400px] grid-cols-2">
-            <TabsTrigger value="latest">Latest Model</TabsTrigger>
-            <TabsTrigger value="best">Best Model</TabsTrigger>
+        <Tabs defaultValue="users" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="model">Model Performance</TabsTrigger>
           </TabsList>
-          <TabsContent value="latest">
-            {modelMetrics.latest_metrics ? (
-              renderModelMetrics(modelMetrics.latest_metrics)
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No model metrics available
-              </div>
-            )}
+          <TabsContent value="users" className="space-y-4">
+            <UserManagementTab />
           </TabsContent>
-          <TabsContent value="best">
-            {modelMetrics.best_metrics ? (
-              renderModelMetrics(modelMetrics.best_metrics)
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No best model metrics available
-              </div>
-            )}
+          <TabsContent value="model" className="space-y-4">
+            <ModelManagementTab />
           </TabsContent>
         </Tabs>
-
-        {trainingStatus === 'error' && (
-          <Card className="border-destructive">
-            <CardHeader>
-              <CardTitle className="text-destructive">Training Failed</CardTitle>
-              <CardDescription>An error occurred during model training</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-destructive">{errorMessage}</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Admin Panel</h2>
-        <Button onClick={handleLogout}>Logout</Button>
-      </div>
-
-      <div className="grid gap-8">
-        {/* User Management */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold">User Management</h3>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Add User</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New User</DialogTitle>
-                  <DialogDescription>
-                    Enter the details for the new user below.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Username</label>
-                    <Input
-                      value={newUser.username}
-                      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Email</label>
-                    <Input
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Password</label>
-                    <Input
-                      type="password"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">First Name</label>
-                    <Input
-                      value={newUser.first_name}
-                      onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Last Name</label>
-                    <Input
-                      value={newUser.last_name}
-                      onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={newUser.is_staff}
-                      onChange={(e) => setNewUser({ ...newUser, is_staff: e.target.checked })}
-                      className="h-4 w-4"
-                    />
-                    <label className="text-sm font-medium">Admin User</label>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={handleCreateUser}>Create User</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Admin</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Array.isArray(users) && users.length > 0 ? (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{`${user.first_name} ${user.last_name}`}</TableCell>
-                      <TableCell>{user.is_staff ? "Yes" : "No"}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
-        {/* Model Training */}
-        <div className="space-y-6">
-          {renderTrainingMetrics()}
-        </div>
       </div>
     </div>
   )
