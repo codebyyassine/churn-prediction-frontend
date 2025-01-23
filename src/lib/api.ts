@@ -1,83 +1,37 @@
-interface Credentials {
-  username: string;
-  password: string;
+import { 
+  CustomerFilters, 
+  AlertHistoryFilters,
+  Customer,
+  PredictionResult,
+  PaginatedResponse,
+  BulkOperationResponse,
+  ImportResponse,
+  AlertConfig,
+  AlertHistory,
+  RiskDashboardData,
+  AlertStats,
+  Credentials
+} from "../types"
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+// Store credentials in memory
+let credentials: Credentials | null = null
+
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+
+  if (credentials) {
+    headers['Authorization'] = 'Basic ' + btoa(`${credentials.username}:${credentials.password}`)
+  }
+
+  return headers
 }
 
-interface Customer {
-  customer_id?: number;
-  credit_score: number;
-  age: number;
-  tenure: number;
-  balance: number;
-  num_of_products: number;
-  has_cr_card: boolean;
-  is_active_member: boolean;
-  estimated_salary: number;
-  geography: string;
-  gender: string;
-  exited?: boolean;
-  surname?: string;
-}
-
-interface PredictionResult {
-  churn_probability: number;
-  feature_importance: Array<{
-    feature: string;
-    importance: number;
-  }>;
-}
-
-interface CustomerFilters {
-  geography?: string;
-  gender?: string;
-  min_age?: number;
-  max_age?: number;
-  min_credit_score?: number;
-  max_credit_score?: number;
-  min_balance?: number;
-  max_balance?: number;
-  exited?: boolean;
-  has_cr_card?: boolean;
-  is_active_member?: boolean;
-  search?: string;
-  ordering?: string;
-  page?: number;
-  page_size?: number;
-}
-
-interface PaginatedResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
-}
-
-interface BulkOperationResponse {
-  status: 'success' | 'error' | 'partial_success';
-  message: string;
-  data: any;
-}
-
-interface ImportResponse {
-  status: 'success' | 'error';
-  created: number;
-  updated: number;
-  skipped: number;
-  details: {
-    created_ids: number[];
-    updated_ids: number[];
-    skipped_ids: number[];
-  };
-  message?: string;
-}
-
-// Use Django API URL directly
-const BASE_URL = 'http://localhost:8000/api';
-
-// Helper to ensure trailing slash
-const url = (path: string) => `${BASE_URL}${path}/`;
-
-// Helper to build query string from filters
+// Helper to build query string from customer filters
 const buildQueryString = (filters?: CustomerFilters): string => {
   if (!filters) return '';
   
@@ -105,220 +59,327 @@ const buildQueryString = (filters?: CustomerFilters): string => {
   return params.toString();
 };
 
-export class ApiService {
-  private static credentials: Credentials | null = null;
-
-  static setCredentials(credentials: Credentials) {
-    this.credentials = credentials;
-  }
-
-  static clearCredentials() {
-    this.credentials = null;
-  }
-
-  private static getHeaders() {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-
-    if (this.credentials) {
-      headers['Authorization'] = 'Basic ' + btoa(`${this.credentials.username}:${this.credentials.password}`);
+// Helper to build query string from alert history filters
+const buildAlertHistoryQueryString = (filters?: AlertHistoryFilters): string => {
+  if (!filters) return '';
+  
+  const params = new URLSearchParams();
+  
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '' && value !== null) {
+      // Handle boolean values
+      if (typeof value === 'boolean') {
+        params.append(key, value.toString());
+      } else {
+        params.append(key, value.toString());
+      }
     }
+  });
+  
+  return params.toString();
+};
 
-    return headers;
-  }
+export const ApiService = {
+  // Authentication
+  setCredentials: (creds: Credentials) => {
+    credentials = creds
+  },
+
+  clearCredentials: () => {
+    credentials = null
+  },
 
   // User Management
-  static async getUsers() {
-    const response = await fetch(url('/users'), {
-      headers: this.getHeaders(),
-    });
+  getUsers: async () => {
+    const response = await fetch(`${BASE_URL}/api/users/`, {
+      headers: getAuthHeaders()
+    })
     if (!response.ok) {
-      throw new Error(`Failed to fetch users: ${response.statusText}`);
+      throw new Error('Failed to fetch users')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async createUser(userData: Partial<Credentials>) {
-    const response = await fetch(url('/users'), {
+  createUser: async (userData: Partial<Credentials>) => {
+    const response = await fetch(`${BASE_URL}/api/users/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(userData),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to create user: ${response.statusText}`);
+      throw new Error('Failed to create user')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
   // Customer Management
-  static async getCustomers(filters?: CustomerFilters): Promise<PaginatedResponse<Customer>> {
-    const queryString = buildQueryString(filters);
-    const response = await fetch(`${url('/customers')}?${queryString}`, {
-      headers: this.getHeaders(),
-    });
+  getCustomers: async (filters?: CustomerFilters): Promise<PaginatedResponse<Customer>> => {
+    const queryString = buildQueryString(filters)
+    const response = await fetch(`${BASE_URL}/api/customers/?${queryString}`, {
+      headers: getAuthHeaders()
+    })
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch customers: ${response.statusText}`);
+      throw new Error('Failed to fetch customers')
     }
     
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async createCustomer(customerData: Omit<Customer, 'customer_id'>) {
-    const response = await fetch(url('/customers'), {
+  createCustomer: async (customerData: Omit<Customer, 'customer_id'>) => {
+    const response = await fetch(`${BASE_URL}/api/customers/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(customerData),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(customerData)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to create customer: ${response.statusText}`);
+      throw new Error('Failed to create customer')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async updateCustomer(customer_id: number, customerData: Partial<Customer>) {
-    const response = await fetch(url(`/customers/${customer_id}`), {
+  updateCustomer: async (customer_id: number, customerData: Partial<Customer>) => {
+    const response = await fetch(`${BASE_URL}/api/customers/${customer_id}/`, {
       method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ ...customerData, customer_id }),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ ...customerData, customer_id })
+    })
     if (!response.ok) {
-      throw new Error(`Failed to update customer: ${response.statusText}`);
+      throw new Error('Failed to update customer')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async deleteCustomer(customer_id: number) {
-    const response = await fetch(url(`/customers/${customer_id}`), {
+  deleteCustomer: async (customer_id: number) => {
+    const response = await fetch(`${BASE_URL}/api/customers/${customer_id}/`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+      headers: getAuthHeaders()
+    })
     if (!response.ok) {
-      throw new Error(`Failed to delete customer: ${response.statusText}`);
+      throw new Error('Failed to delete customer')
     }
-    return response.ok;
-  }
+    return response.ok
+  },
 
   // Bulk Operations
-  static async bulkCreateCustomers(customers: Omit<Customer, 'customer_id'>[]) {
-    const response = await fetch(url('/customers/bulk/create'), {
+  bulkCreateCustomers: async (customers: Omit<Customer, 'customer_id'>[]) => {
+    const response = await fetch(`${BASE_URL}/api/customers/bulk/create/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(customers),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(customers)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to bulk create customers: ${response.statusText}`);
+      throw new Error('Failed to bulk create customers')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async bulkUpdateCustomers(customers: (Partial<Customer> & { customer_id: number })[]) {
-    const response = await fetch(url('/customers/bulk/update'), {
+  bulkUpdateCustomers: async (customers: (Partial<Customer> & { customer_id: number })[]) => {
+    const response = await fetch(`${BASE_URL}/api/customers/bulk/update/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(customers),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(customers)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to bulk update customers: ${response.statusText}`);
+      throw new Error('Failed to bulk update customers')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async bulkDeleteCustomers(ids: number[]): Promise<BulkOperationResponse> {
-    const response = await fetch(url('/customers/bulk/delete'), {
+  bulkDeleteCustomers: async (ids: number[]): Promise<BulkOperationResponse> => {
+    const response = await fetch(`${BASE_URL}/api/customers/bulk/delete/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(ids),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(ids)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to bulk delete customers: ${response.statusText}`);
+      throw new Error('Failed to bulk delete customers')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  // Prediction
-  static async predictChurn(customerData: Omit<Customer, 'customer_id' | 'exited' | 'surname'>): Promise<PredictionResult> {
-    const response = await fetch(url('/predict'), {
+  // Prediction & Model Management
+  predictChurn: async (customerData: Omit<Customer, 'customer_id' | 'exited' | 'surname'>): Promise<PredictionResult> => {
+    const response = await fetch(`${BASE_URL}/api/predict/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(customerData),
-    });
+      headers: getAuthHeaders(),
+      body: JSON.stringify(customerData)
+    })
     if (!response.ok) {
-      throw new Error(`Failed to get prediction: ${response.statusText}`);
+      throw new Error('Failed to get prediction')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  // Model Training
-  static async trainModel() {
-    const response = await fetch(url('/train'), {
+  trainModel: async () => {
+    const response = await fetch(`${BASE_URL}/api/train/`, {
       method: 'POST',
-      headers: this.getHeaders(),
-    });
+      headers: getAuthHeaders()
+    })
     if (!response.ok) {
-      throw new Error(`Failed to train model: ${response.statusText}`);
+      throw new Error('Failed to train model')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async getModelMetrics() {
-    const response = await fetch(url('/model-metrics'), {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
+  getModelMetrics: async () => {
+    const response = await fetch(`${BASE_URL}/api/model-metrics/`, {
+      headers: getAuthHeaders()
+    })
     if (!response.ok) {
-      throw new Error(`Failed to get model metrics: ${response.statusText}`);
+      throw new Error('Failed to get model metrics')
     }
-    return response.json();
-  }
+    return response.json()
+  },
 
-  static async getDashboardStats(): Promise<any> {
-    const response = await fetch(url('/dashboard/stats'), {
-      method: 'GET',
-      headers: this.getHeaders(),
+  // Dashboard & Stats
+  getDashboardStats: async () => {
+    const response = await fetch(`${BASE_URL}/api/dashboard/stats/`, {
+      headers: getAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard stats')
+    }
+    return response.json()
+  },
+
+  // File Import
+  importCustomersCSV: async (file: File, updateExisting: boolean = false): Promise<ImportResponse> => {
+    const formData = new FormData()
+    formData.append('csv_file', file)
+    formData.append('update_existing', updateExisting.toString())
+
+    const headers = getAuthHeaders()
+    // Remove Content-Type as it will be set automatically with the correct boundary
+    delete headers['Content-Type']
+
+    const response = await fetch(`${BASE_URL}/api/customers/import-csv/`, {
+      method: 'POST',
+      headers: headers,
+      body: formData
     })
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch dashboard stats: ${response.statusText}`)
-    }
-
-    return response.json()
-  }
-
-  static async importCustomersCSV(file: File, updateExisting: boolean = false): Promise<ImportResponse> {
-    const formData = new FormData();
-    formData.append('csv_file', file);
-    formData.append('update_existing', updateExisting.toString());
-
-    const headers = this.getHeaders();
-    // Remove Content-Type as it will be set automatically with the correct boundary
-    delete headers['Content-Type'];
-
-    const response = await fetch(`${BASE_URL}/customers/import-csv/`, {
-      method: 'POST',
-      headers: headers,
-      credentials: 'include', // Important for cookies/auth
-      body: formData,
-    });
-
-    if (!response.ok) {
-      let errorMessage: string;
+      let errorMessage: string
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.detail || `HTTP error! status: ${response.status}`;
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.detail || `HTTP error! status: ${response.status}`
       } catch {
-        errorMessage = `HTTP error! status: ${response.status}`;
+        errorMessage = `HTTP error! status: ${response.status}`
       }
-      throw new Error(errorMessage);
+      throw new Error(errorMessage)
     }
 
-    const data = await response.json();
+    const data = await response.json()
     if (data.status === 'error') {
-      throw new Error(data.message || 'Import failed');
+      throw new Error(data.message || 'Import failed')
     }
 
-    return data;
+    return data
+  },
+
+  // Alert Management
+  getAlertConfig: async (): Promise<AlertConfig> => {
+    const response = await fetch(`${BASE_URL}/api/alerts/config/`, {
+      headers: getAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch alert config')
+    }
+    return response.json()
+  },
+
+  updateAlertConfig: async (config: AlertConfig): Promise<AlertConfig> => {
+    const response = await fetch(`${BASE_URL}/api/alerts/config/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(config)
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update alert config')
+    }
+    return response.json()
+  },
+
+  getAlertHistory: async (filters?: AlertHistoryFilters) => {
+    const queryString = buildAlertHistoryQueryString(filters)
+    const response = await fetch(`${BASE_URL}/api/alerts/history/?${queryString}`, {
+      headers: getAuthHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch alert history')
+    }
+    
+    return response.json()
+  },
+
+  getAlertStats: async () => {
+    const response = await fetch(`${BASE_URL}/api/alerts/stats/`, {
+      headers: getAuthHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch alert statistics')
+    }
+    
+    return response.json()
+  },
+
+  getRiskDashboard: async () => {
+    const response = await fetch(`${BASE_URL}/api/risk/dashboard/`, {
+      headers: getAuthHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch risk dashboard')
+    }
+    
+    return response.json()
+  },
+
+  triggerMonitoring: async () => {
+    const response = await fetch(`${BASE_URL}/api/risk/monitor/trigger/`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to trigger monitoring')
+    }
+    
+    return response.json()
+  },
+
+  getMonitoringResult: async (customer_id: number) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/risk/monitoring/${customer_id}/`, {
+        headers: getAuthHeaders()
+      })
+      
+      if (!response.ok) {
+        throw new Error('No monitoring data available')
+      }
+      
+      return response.json()
+    } catch (error) {
+      throw error
+    }
+  },
+
+  // Add new method for batch risk score fetching
+  getRiskScores: async (customerIds: number[]) => {
+    const queryString = new URLSearchParams();
+    customerIds.forEach(id => queryString.append('customer_ids', id.toString()));
+    
+    const response = await fetch(`${BASE_URL}/api/risk/monitoring/batch/?${queryString}`, {
+      headers: getAuthHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch risk scores')
+    }
+    
+    return response.json()
   }
 } 

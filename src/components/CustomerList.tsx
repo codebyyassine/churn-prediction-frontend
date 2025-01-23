@@ -33,6 +33,20 @@ import { toast } from "@/components/ui/use-toast"
 import { CustomerForm } from './CustomerForm'
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
+
+interface RiskScore {
+  customer_id: number
+  probability: number
+  risk_change: number
+}
+
+interface RiskScoreMap {
+  [key: number]: {
+    risk_score: number
+    risk_change: number
+  }
+}
 
 export function CustomerList() {
   const [customers, setCustomers] = useState<any[]>([])
@@ -84,13 +98,56 @@ export function CustomerList() {
       const data = await ApiService.getCustomers(validFilters)
       console.log('Received data:', data)
       console.log('Results array:', data.results)
-      setCustomers(data.results || [])
+
+      // Get all customer IDs
+      const customerIds = data.results.map(customer => customer.customer_id).filter((id): id is number => id !== undefined)
+      
+      // Process each customer to get their risk scores
+      const processedCustomers = await Promise.all(data.results.map(async (customer) => {
+        if (!customer.customer_id) return customer;
+        
+        try {
+          // Try to get monitoring data first
+          const monitoringData = await ApiService.getMonitoringResult(customer.customer_id);
+          return {
+            ...customer,
+            risk_score: monitoringData.probability,
+            risk_change: monitoringData.risk_change
+          };
+        } catch {
+          try {
+            // Fall back to prediction if monitoring data is not available
+            const prediction = await ApiService.predictChurn({
+              credit_score: customer.credit_score,
+              age: customer.age,
+              tenure: customer.tenure,
+              balance: customer.balance,
+              num_of_products: customer.num_of_products,
+              has_cr_card: customer.has_cr_card,
+              is_active_member: customer.is_active_member,
+              estimated_salary: customer.estimated_salary,
+              geography: customer.geography,
+              gender: customer.gender
+            });
+            return {
+              ...customer,
+              risk_score: prediction.churn_probability,
+              risk_change: 0 // No change data for predictions
+            };
+          } catch (error) {
+            console.log(`Could not get risk score for customer ${customer.customer_id}`, error);
+            return customer;
+          }
+        }
+      }));
+
+      setCustomers(processedCustomers || [])
       setPagination({
         currentPage: filters.page,
         totalPages: Math.ceil(data.count / filters.page_size),
         totalItems: data.count,
       })
-      console.log('Updated customers state:', data.results)
+      console.log('Updated customers state:', processedCustomers)
       console.log('Updated pagination:', {
         currentPage: filters.page,
         totalPages: Math.ceil(data.count / filters.page_size),
@@ -137,6 +194,26 @@ export function CustomerList() {
 
   const handlePredictChurn = async (customer: any) => {
     try {
+      // First try to get monitoring data
+      try {
+        const monitoringData = await ApiService.getMonitoringResult(customer.customer_id)
+        // Update the customer in the table with the monitoring data
+        setCustomers(prev => prev.map(c => 
+          c.customer_id === customer.customer_id 
+            ? { 
+                ...c, 
+                risk_score: monitoringData.probability,
+                risk_change: monitoringData.risk_change
+              } 
+            : c
+        ))
+        return
+      } catch (error) {
+        // If no monitoring data, fall back to prediction
+        console.log('No monitoring data available, falling back to prediction')
+      }
+
+      // Fall back to prediction
       const { credit_score, age, tenure, balance, num_of_products, has_cr_card,
         is_active_member, estimated_salary, geography, gender } = customer
       
@@ -145,14 +222,21 @@ export function CustomerList() {
         is_active_member, estimated_salary, geography, gender
       })
 
-      toast({
-        title: "Churn Prediction",
-        description: `Probability: ${(prediction.churn_probability * 100).toFixed(2)}%`,
-      })
+      // Update the customer in the table with the prediction
+      setCustomers(prev => prev.map(c => 
+        c.customer_id === customer.customer_id 
+          ? { 
+              ...c, 
+              risk_score: prediction.churn_probability,
+              risk_change: 0 // No change data available for predictions
+            } 
+          : c
+      ))
+
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to get prediction",
+        description: "Failed to get risk assessment",
         variant: "destructive",
       })
     }
@@ -670,6 +754,7 @@ export function CustomerList() {
                 <TableHead>Balance</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead>Active Member</TableHead>
+                <TableHead>Risk Score</TableHead>
                 <TableHead>Churn Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -686,6 +771,7 @@ export function CustomerList() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -698,7 +784,7 @@ export function CustomerList() {
                 ))
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-4">
+                  <TableCell colSpan={11} className="text-center py-4">
                     No customers found
                   </TableCell>
                 </TableRow>
@@ -732,6 +818,32 @@ export function CustomerList() {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      {customer.risk_score ? (
+                        <div className="flex items-center gap-2">
+                          <Progress
+                            value={customer.risk_score * 100}
+                            className="w-[60px]"
+                          />
+                          <span className="text-sm font-medium">
+                            {(customer.risk_score * 100).toFixed(1)}%
+                          </span>
+                          {customer.risk_change > 0 && (
+                            <Badge variant="destructive" className="ml-1">
+                              +{customer.risk_change.toFixed(1)}%
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePredictChurn(customer)}
+                        >
+                          Calculate
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={customer.exited ? "destructive" : "success"}>
                         {customer.exited ? "Churned" : "Retained"}
                       </Badge>
@@ -744,13 +856,6 @@ export function CustomerList() {
                           onClick={() => handleEdit(customer)}
                         >
                           Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePredictChurn(customer)}
-                        >
-                          Predict
                         </Button>
                         <Button
                           variant="destructive"

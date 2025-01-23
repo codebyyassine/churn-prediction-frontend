@@ -50,6 +50,17 @@ export function Navbar() {
             Customer Management
           </Link>
           <Link
+            href="/risk"
+            className={cn(
+              "text-sm font-medium transition-colors hover:text-primary relative py-2",
+              isActive("/risk")
+                ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            Risk Monitoring
+          </Link>
+          <Link
             href="/predict"
             className={cn(
               "text-sm font-medium transition-colors hover:text-primary relative py-2",

@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ImportCustomersDialog } from "@/components/ImportCustomersDialog"
+import { AlertsTab } from "@/components/AlertsTab"
 
 interface User {
   id: number;
@@ -495,7 +496,7 @@ export function AdminPanel() {
           <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Manage users and monitor model performance
+            Manage users, monitor model performance, and configure alerts
           </p>
         </div>
 
@@ -503,12 +504,16 @@ export function AdminPanel() {
           <TabsList>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="model">Model Performance</TabsTrigger>
+            <TabsTrigger value="alerts">Risk Alerts</TabsTrigger>
           </TabsList>
           <TabsContent value="users" className="space-y-4">
             <UserManagementTab />
           </TabsContent>
           <TabsContent value="model" className="space-y-4">
             <ModelManagementTab />
+          </TabsContent>
+          <TabsContent value="alerts" className="space-y-4">
+            <AlertsTab />
           </TabsContent>
         </Tabs>
       </div>
