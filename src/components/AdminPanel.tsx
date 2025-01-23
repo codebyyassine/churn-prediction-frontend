@@ -35,6 +35,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ImportCustomersDialog } from "@/components/ImportCustomersDialog"
 
 interface User {
   id: number;
@@ -138,75 +139,78 @@ function UserManagementTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Add User</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>
-                Create a new user account
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  value={newUser.username}
-                  onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                />
+        <div className="flex gap-2">
+          <ImportCustomersDialog />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Add User</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
+                <DialogDescription>
+                  Create a new user account
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={newUser.first_name}
+                    onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={newUser.last_name}
+                    onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isAdmin"
+                    checked={newUser.is_staff}
+                    onChange={(e) => setNewUser({ ...newUser, is_staff: e.target.checked })}
+                  />
+                  <Label htmlFor="isAdmin">Admin User</Label>
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                />
+              <div className="flex justify-end">
+                <Button onClick={handleCreateUser}>Create User</Button>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  value={newUser.first_name}
-                  onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  value={newUser.last_name}
-                  onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isAdmin"
-                  checked={newUser.is_staff}
-                  onChange={(e) => setNewUser({ ...newUser, is_staff: e.target.checked })}
-                />
-                <Label htmlFor="isAdmin">Admin User</Label>
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button onClick={handleCreateUser}>Create User</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -316,17 +320,17 @@ function ModelManagementTab() {
   }
 
   if (!metrics || !metrics.latest_metrics) {
-    return (
-      <div className="text-center py-4 text-muted-foreground">
-        No model metrics available
-      </div>
+      return (
+        <div className="text-center py-4 text-muted-foreground">
+          No model metrics available
+        </div>
     )
-  }
+    }
 
   // Use selected metrics for display
   const currentMetrics = activeMetrics === 'latest' ? metrics.latest_metrics : metrics.best_metrics
 
-  return (
+    return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Model Performance</h2>
@@ -460,7 +464,7 @@ function ModelManagementTab() {
                 <div className="text-2xl font-bold">
                   {currentMetrics.training_details.total_samples.toLocaleString()}
                 </div>
-              </div>
+                </div>
               <div>
                 <div className="text-sm font-medium mb-1">Training Time</div>
                 <div className="text-2xl font-bold">
@@ -471,24 +475,24 @@ function ModelManagementTab() {
                 <div className="text-sm font-medium mb-1">Cross-Validation Score</div>
                 <div className="text-2xl font-bold">
                   {(getAverageCrossValScore(currentMetrics.training_details.cross_val_scores) * 100).toFixed(1)}%
-                </div>
+                      </div>
                 <div className="text-sm text-muted-foreground">
                   Average of {currentMetrics.training_details.cross_val_scores.length} folds
-                </div>
+                  </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-    </div>
-  )
-}
+      </div>
+    )
+  }
 
 export function AdminPanel() {
-  return (
+    return (
     <div className="container mx-auto py-10">
       <div className="space-y-6">
-        <div>
+          <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-2">
             Manage users and monitor model performance

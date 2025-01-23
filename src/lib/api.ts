@@ -58,6 +58,19 @@ interface BulkOperationResponse {
   data: any;
 }
 
+interface ImportResponse {
+  status: 'success' | 'error';
+  created: number;
+  updated: number;
+  skipped: number;
+  details: {
+    created_ids: number[];
+    updated_ids: number[];
+    skipped_ids: number[];
+  };
+  message?: string;
+}
+
 // Use Django API URL directly
 const BASE_URL = 'http://localhost:8000/api';
 
@@ -272,5 +285,40 @@ export class ApiService {
     }
 
     return response.json()
+  }
+
+  static async importCustomersCSV(file: File, updateExisting: boolean = false): Promise<ImportResponse> {
+    const formData = new FormData();
+    formData.append('csv_file', file);
+    formData.append('update_existing', updateExisting.toString());
+
+    const headers = this.getHeaders();
+    // Remove Content-Type as it will be set automatically with the correct boundary
+    delete headers['Content-Type'];
+
+    const response = await fetch(`${BASE_URL}/customers/import-csv/`, {
+      method: 'POST',
+      headers: headers,
+      credentials: 'include', // Important for cookies/auth
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage: string;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.detail || `HTTP error! status: ${response.status}`;
+      } catch {
+        errorMessage = `HTTP error! status: ${response.status}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    if (data.status === 'error') {
+      throw new Error(data.message || 'Import failed');
+    }
+
+    return data;
   }
 } 
