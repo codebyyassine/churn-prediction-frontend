@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Customer Churn Prediction & Risk Monitoring System
 
-## Getting Started
+A modern web application for predicting and monitoring customer churn risk using machine learning. Built with Next.js, TypeScript, and Python.
 
-First, run the development server:
+![Risk Dashboard Screenshot](docs/images/dashboard.png)
 
+## 🌟 Features
+
+- **Risk Monitoring Dashboard**
+  - Real-time risk score tracking
+  - High-risk customer identification
+  - Risk trend analysis
+  - Risk distribution visualization
+
+- **Customer Management**
+  - Comprehensive customer data management
+  - Bulk operations support
+  - Advanced filtering and search
+  - CSV import/export
+
+- **Alert System**
+  - Configurable risk thresholds
+  - Automated notifications
+  - Alert history tracking
+  - Alert statistics and analytics
+
+## 📚 Documentation
+
+For detailed information about different aspects of the project, please refer to:
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Setup Guide](docs/SETUP.md)
+- [API Documentation](docs/API.md)
+- [Frontend Documentation](docs/FRONTEND.md)
+- [Development Guide](docs/DEVELOPMENT.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Contributing Guidelines](docs/CONTRIBUTING.md)
+
+## 🚀 Quick Start
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/churn-prediction-frontend.git
+cd churn-prediction-frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env.local
+# Edit .env.local with your configuration
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Start the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Frontend**
+  - Next.js 14
+  - TypeScript
+  - Tailwind CSS
+  - Shadcn UI
+  - React Query
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Backend**
+  - FastAPI
+  - SQLAlchemy
+  - Scikit-learn
+  - PostgreSQL
 
-## Deploy on Vercel
+## 📄 License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guidelines](docs/CONTRIBUTING.md) before submitting a Pull Request.
+
+## 📧 Contact
+
+For questions or support, please [open an issue](https://github.com/yourusername/churn-prediction-frontend/issues) or contact the maintainers.
