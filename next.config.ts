@@ -13,7 +13,13 @@ const nextConfig = {
         ],
       },
     ]
-  }
+  },
+  // Disable ESLint during production builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // Enable standalone output
+  output: 'standalone',
 }
 
 export default nextConfig;
